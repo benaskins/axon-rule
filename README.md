@@ -12,12 +12,16 @@ go get github.com/benaskins/axon-spec
 
 ## Quick start
 
-Define predicates on your domain type. Every predicate returns `(bool, map[string]any)` — the bool is the pass/fail signal, the map carries optional context about the failure.
+Define predicates on your domain type. Every predicate returns a `spec.PredicateResult` using `Pass()`, `Fail()`, or `FailWith()`.
 
 ```go
 package ledger
 
-import "time"
+import (
+    "time"
+
+    spec "github.com/benaskins/axon-spec"
+)
 
 type JournalEntry struct {
     Description string
@@ -25,29 +29,41 @@ type JournalEntry struct {
     PostedAt    *time.Time
 }
 
-func (e JournalEntry) HasDescription() (bool, map[string]any) {
-    return e.Description != "", nil
+func (e JournalEntry) HasDescription() spec.PredicateResult {
+    if e.Description != "" {
+        return spec.Pass()
+    }
+    return spec.Fail()
 }
 
-func (e JournalEntry) HasAtLeastTwoLines() (bool, map[string]any) {
-    return len(e.Lines) >= 2, nil
+func (e JournalEntry) HasAtLeastTwoLines() spec.PredicateResult {
+    if len(e.Lines) >= 2 {
+        return spec.Pass()
+    }
+    return spec.Fail()
 }
 
-func (e JournalEntry) IsNotPosted() (bool, map[string]any) {
-    return e.PostedAt == nil, nil
+func (e JournalEntry) IsNotPosted() spec.PredicateResult {
+    if e.PostedAt == nil {
+        return spec.Pass()
+    }
+    return spec.Fail()
 }
 
-func (e JournalEntry) DebitsEqualCredits() (bool, map[string]any) {
+func (e JournalEntry) DebitsEqualCredits() spec.PredicateResult {
     var d, c int64
     for _, l := range e.Lines {
         d += l.Debit
         c += l.Credit
     }
-    return d == c, map[string]any{
+    if d == c {
+        return spec.Pass()
+    }
+    return spec.FailWith(map[string]any{
         "total_debits":  d,
         "total_credits": c,
         "difference":    d - c,
-    }
+    })
 }
 ```
 
