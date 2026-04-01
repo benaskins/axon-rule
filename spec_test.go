@@ -12,21 +12,21 @@ type order struct {
 	Total      int64
 }
 
-func (o order) HasCustomer() spec.PredicateResult {
+func (o order) HasCustomer() spec.Verdict {
 	if o.CustomerID != "" {
 		return spec.Pass()
 	}
 	return spec.Fail()
 }
 
-func (o order) HasItems() spec.PredicateResult {
+func (o order) HasItems() spec.Verdict {
 	if len(o.Items) > 0 {
 		return spec.Pass()
 	}
 	return spec.Fail()
 }
 
-func (o order) HasPositiveTotal() spec.PredicateResult {
+func (o order) HasPositiveTotal() spec.Verdict {
 	if o.Total > 0 {
 		return spec.Pass()
 	}

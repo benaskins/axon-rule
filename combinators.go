@@ -13,7 +13,7 @@ type allOf[T any] struct {
 
 func (a allOf[T]) Code() Code { return "all-of" }
 
-func (a allOf[T]) IsSatisfiedBy(candidate T) PredicateResult {
+func (a allOf[T]) IsSatisfiedBy(candidate T) Verdict {
 	satisfied := true
 	for _, s := range a.specs {
 		r := s.IsSatisfiedBy(candidate)
@@ -47,7 +47,7 @@ type anyOf[T any] struct {
 
 func (a anyOf[T]) Code() Code { return "any-of" }
 
-func (a anyOf[T]) IsSatisfiedBy(candidate T) PredicateResult {
+func (a anyOf[T]) IsSatisfiedBy(candidate T) Verdict {
 	for _, s := range a.specs {
 		r := s.IsSatisfiedBy(candidate)
 		if r.OK {
@@ -84,7 +84,7 @@ func (n notSpec[T]) Code() Code {
 	return "not:" + n.inner.Code()
 }
 
-func (n notSpec[T]) IsSatisfiedBy(candidate T) PredicateResult {
+func (n notSpec[T]) IsSatisfiedBy(candidate T) Verdict {
 	r := n.inner.IsSatisfiedBy(candidate)
 	if r.OK {
 		return Fail()

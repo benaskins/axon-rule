@@ -1,24 +1,24 @@
 package spec
 
-// PredicateResult is the return value of a predicate function.
-type PredicateResult struct {
+// Verdict is the return value of a predicate function.
+type Verdict struct {
 	OK      bool
 	Context map[string]any
 }
 
 // Pass returns a successful predicate result.
-func Pass() PredicateResult {
-	return PredicateResult{OK: true}
+func Pass() Verdict {
+	return Verdict{OK: true}
 }
 
 // Fail returns a failed predicate result with no context.
-func Fail() PredicateResult {
-	return PredicateResult{OK: false}
+func Fail() Verdict {
+	return Verdict{OK: false}
 }
 
 // FailWith returns a failed predicate result with context.
-func FailWith(context map[string]any) PredicateResult {
-	return PredicateResult{OK: false, Context: context}
+func FailWith(context map[string]any) Verdict {
+	return Verdict{OK: false, Context: context}
 }
 
 // Violation records a spec that was not satisfied.
