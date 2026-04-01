@@ -8,19 +8,19 @@ Single-package library (`rule`) with four files:
 
 | File | Contents |
 |------|----------|
-| `code.go` | `Code` type (typed string), built-in codes (`MustBePresent`, `MustNotBeEmpty`, `MustBePositive`) |
-| `spec.go` | `Rule[T]` interface, `New` constructor |
-| `combinators.go` | `AllOf`, `AnyOf`, `Not` — all return `Rule[T]` |
-| `evaluate.go` | `Evaluate` function, internal `evaluator` interface for composite recursion |
-| `result.go` | `Violation` (Code + Context), `Result` ([]Violation + accessors) |
+| `spec.go` | `Rule[T]` interface (single method: `Check`), `New` constructor |
+| `combinators.go` | `AllOf`, `AnyOf`, `Not` — all return exported combinator types with `Evaluate` |
+| `evaluate.go` | Internal `collect` function, `evaluator` interface for composite recursion |
+| `result.go` | `Verdict`, `Violation`, `Violations`, `codeName` (reflect-based code derivation) |
 
 ## Key design decisions
 
-- **One method signature**: all predicates return `Verdict`. Simple rules return `Pass()` or `Fail()`, rich rules use `FailWith(typedContext)`.
-- **No presentation in violations**: `Violation` has `Code` and `Context` only. Message lookup is a consumer concern.
-- **Violation codes are typed constants**: domain packages own their codes, axon-rule provides common ones.
-- **No `CompositeRule`**: everything is `Rule[T]`. Composites implement an unexported `evaluator` interface for `Evaluate` to recurse into.
-- **Method expressions as primary pattern**: `rule.New(code, DomainType.Method)` — no closure wrappers needed.
+- **Type-driven violation codes**: `Violation.Code` is derived from `reflect.TypeOf(context).Name()`. No manual string codes — the type is the identity.
+- **Single-method interface**: `Rule[T]` has only `Check(T) Verdict`. No `Code()` method.
+- **All failures are typed**: predicates return `FailWith(TypedContext{})`. No bare `Fail()`. Marker types (e.g. `TooFewLines struct{}`) for context-free violations.
+- **No presentation in violations**: `Violation` has `Code` (derived) and `Context` (typed). Messages and translations are a consumer concern.
+- **Method expressions as primary pattern**: `rule.New(DomainType.Method)` — no closure wrappers needed.
+- **Exported combinator types**: `AllOfRule[T]`, `AnyOfRule[T]`, `NotRule[T]` expose `Evaluate` for violation collection.
 
 ## Testing
 
@@ -32,4 +32,4 @@ All tests are table-driven or single-assertion. Domain test type is `order` defi
 
 ## Dependencies
 
-None. Standard library only.
+Standard library only (`reflect`).
