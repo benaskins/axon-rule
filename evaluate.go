@@ -22,9 +22,9 @@ func collect[T any](candidate T, s Spec[T]) []Violation {
 		return r.Violations
 	}
 
-	ok, ctx := s.IsSatisfiedBy(candidate)
-	if ok {
+	pr := s.IsSatisfiedBy(candidate)
+	if pr.OK {
 		return nil
 	}
-	return []Violation{{Code: s.Code(), Context: ctx}}
+	return []Violation{{Code: s.Code(), Context: pr.Context}}
 }

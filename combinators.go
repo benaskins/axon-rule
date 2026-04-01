@@ -13,15 +13,18 @@ type allOf[T any] struct {
 
 func (a allOf[T]) Code() Code { return "all-of" }
 
-func (a allOf[T]) IsSatisfiedBy(candidate T) (bool, map[string]any) {
+func (a allOf[T]) IsSatisfiedBy(candidate T) PredicateResult {
 	satisfied := true
 	for _, s := range a.specs {
-		ok, _ := s.IsSatisfiedBy(candidate)
-		if !ok {
+		r := s.IsSatisfiedBy(candidate)
+		if !r.OK {
 			satisfied = false
 		}
 	}
-	return satisfied, nil
+	if satisfied {
+		return Pass()
+	}
+	return Fail()
 }
 
 func (a allOf[T]) evaluate(candidate T) Result {
@@ -44,14 +47,14 @@ type anyOf[T any] struct {
 
 func (a anyOf[T]) Code() Code { return "any-of" }
 
-func (a anyOf[T]) IsSatisfiedBy(candidate T) (bool, map[string]any) {
+func (a anyOf[T]) IsSatisfiedBy(candidate T) PredicateResult {
 	for _, s := range a.specs {
-		ok, _ := s.IsSatisfiedBy(candidate)
-		if ok {
-			return true, nil
+		r := s.IsSatisfiedBy(candidate)
+		if r.OK {
+			return Pass()
 		}
 	}
-	return false, nil
+	return Fail()
 }
 
 func (a anyOf[T]) evaluate(candidate T) Result {
@@ -81,14 +84,17 @@ func (n notSpec[T]) Code() Code {
 	return "not:" + n.inner.Code()
 }
 
-func (n notSpec[T]) IsSatisfiedBy(candidate T) (bool, map[string]any) {
-	ok, _ := n.inner.IsSatisfiedBy(candidate)
-	return !ok, nil
+func (n notSpec[T]) IsSatisfiedBy(candidate T) PredicateResult {
+	r := n.inner.IsSatisfiedBy(candidate)
+	if r.OK {
+		return Fail()
+	}
+	return Pass()
 }
 
 func (n notSpec[T]) evaluate(candidate T) Result {
-	ok, _ := n.inner.IsSatisfiedBy(candidate)
-	if !ok {
+	r := n.inner.IsSatisfiedBy(candidate)
+	if !r.OK {
 		return Result{}
 	}
 	return Result{Violations: []Violation{{Code: n.Code()}}}
