@@ -1,6 +1,6 @@
 # axon-rule
 
-Composable domain specifications for Go.
+Composable business rules for Go.
 
 axon-rule implements the Specification pattern using Go generics. It provides a type-safe way to express business rules as named, testable predicates that produce structured violation reports.
 
@@ -12,7 +12,7 @@ go get github.com/benaskins/axon-rule
 
 ## Quick start
 
-Define predicates on your domain type. Every predicate returns a `rule.PredicateResult` using `Pass()`, `Fail()`, or `FailWith()`.
+Define predicates on your domain type. Every predicate returns a `rule.Verdict` using `Pass()`, `Fail()`, or `FailWith()`.
 
 ```go
 package ledger
@@ -29,28 +29,28 @@ type JournalEntry struct {
     PostedAt    *time.Time
 }
 
-func (e JournalEntry) HasDescription() rule.PredicateResult {
+func (e JournalEntry) HasDescription() rule.Verdict {
     if e.Description != "" {
         return rule.Pass()
     }
     return rule.Fail()
 }
 
-func (e JournalEntry) HasAtLeastTwoLines() rule.PredicateResult {
+func (e JournalEntry) HasAtLeastTwoLines() rule.Verdict {
     if len(e.Lines) >= 2 {
         return rule.Pass()
     }
     return rule.Fail()
 }
 
-func (e JournalEntry) IsNotPosted() rule.PredicateResult {
+func (e JournalEntry) IsNotPosted() rule.Verdict {
     if e.PostedAt == nil {
         return rule.Pass()
     }
     return rule.Fail()
 }
 
-func (e JournalEntry) DebitsEqualCredits() rule.PredicateResult {
+func (e JournalEntry) DebitsEqualCredits() rule.Verdict {
     var d, c int64
     for _, l := range e.Lines {
         d += l.Debit
@@ -82,7 +82,7 @@ const (
 )
 ```
 
-Compose specs using method expressions:
+Compose rules using method expressions:
 
 ```go
 package ledger
@@ -100,19 +100,19 @@ var IsValid = rule.AllOf(
 Evaluate:
 
 ```go
-result := rule.Evaluate(entry, ledger.IsValid)
+violations := ledger.IsValid.Evaluate(entry)
 
-if !result.IsValid() {
-    for _, v := range result.Violations {
+if !violations.IsValid() {
+    for _, v := range violations.Items {
         fmt.Println(v.Code)    // "debits-must-equal-credits"
-        fmt.Println(v.Context) // map[total_debits:5000 total_credits:3000 difference:2000]
+        fmt.Println(v.Context) // BalanceMismatch{TotalDebits: 5000, ...}
     }
 }
 ```
 
 ## Combinators
 
-Combine specs to express complex eligibility rules:
+Combine rules to express complex eligibility:
 
 ```go
 var CanPlaceOrder = rule.AllOf(
@@ -127,23 +127,23 @@ var CanPlaceOrder = rule.AllOf(
 
 | Combinator | Behaviour |
 |------------|-----------|
-| `AllOf` | All specs must pass. Evaluates every spec, collects all violations. |
-| `AnyOf` | At least one spec must pass. If none pass, collects all violations. |
+| `AllOf` | All rules must pass. Evaluates every rule, collects all violations. |
+| `AnyOf` | At least one rule must pass. If none pass, collects all violations. |
 | `Not` | Inverts a rule. Produces a violation with `not:` prefix on the code. |
 
 ## Event-sourced command handlers
 
-Spec violations map directly to rejection event payloads:
+Rule violations map directly to rejection event payloads:
 
 ```go
 func (l *Ledger) Handle(cmd RecordJournalCommand) []Event {
     entry := l.buildEntry(cmd)
-    result := rule.Evaluate(entry, ledger.IsValid)
+    violations := ledger.IsValid.Evaluate(entry)
 
-    if !result.IsValid() {
+    if !violations.IsValid() {
         return []Event{JournalRejected{
             EntryID:    cmd.EntryID,
-            Violations: result.Violations,
+            Violations: violations.Items,
             RejectedAt: time.Now(),
         }}
     }
@@ -174,4 +174,5 @@ rule.New(rule.MustNotBeEmpty, Order.HasLineItems)
 - **One interface** — `Rule[T]` is the only abstraction. Combinators return `Rule[T]`.
 - **No presentation** — `Violation` carries a code and context. Messages, translations, and resolution instructions live elsewhere.
 - **Domain-owned codes** — each domain defines its violation codes as typed constants.
+- **Typed context** — `Verdict.Context` is `any`, so domains use their own structs for compile-time safety.
 - **Zero dependencies** — standard library only.

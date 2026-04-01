@@ -1,6 +1,6 @@
 # axon-rule
 
-Composable domain specifications for Go using the Specification pattern with generics.
+Composable business rules for Go using the Specification pattern with generics.
 
 ## Architecture
 
