@@ -11,13 +11,11 @@ type AllOfRule[T any] struct {
 	rules []Rule[T]
 }
 
-func (a AllOfRule[T]) Code() Code { return "all-of" }
-
 func (a AllOfRule[T]) Check(candidate T) Verdict {
 	for _, r := range a.rules {
 		v := r.Check(candidate)
 		if !v.OK {
-			return Fail()
+			return v
 		}
 	}
 	return Pass()
@@ -42,8 +40,6 @@ type AnyOfRule[T any] struct {
 	rules []Rule[T]
 }
 
-func (a AnyOfRule[T]) Code() Code { return "any-of" }
-
 func (a AnyOfRule[T]) Check(candidate T) Verdict {
 	for _, r := range a.rules {
 		v := r.Check(candidate)
@@ -51,7 +47,7 @@ func (a AnyOfRule[T]) Check(candidate T) Verdict {
 			return Pass()
 		}
 	}
-	return Fail()
+	return FailWith(nil)
 }
 
 // Evaluate returns no violations if any rule passes; otherwise collects all.
@@ -67,9 +63,11 @@ func (a AnyOfRule[T]) Evaluate(candidate T) Violations {
 	return Violations{Items: items}
 }
 
+// Negated is the violation context produced when a Not rule fails.
+type Negated struct{}
+
 // Not returns a Rule that inverts another rule. It is satisfied when the
-// inner rule fails. Produces a violation with "not:" prefixed to the inner
-// rule's code.
+// inner rule fails. Produces a Negated violation when the inner rule passes.
 func Not[T any](r Rule[T]) NotRule[T] {
 	return NotRule[T]{inner: r}
 }
@@ -78,14 +76,10 @@ type NotRule[T any] struct {
 	inner Rule[T]
 }
 
-func (n NotRule[T]) Code() Code {
-	return "not:" + n.inner.Code()
-}
-
 func (n NotRule[T]) Check(candidate T) Verdict {
 	v := n.inner.Check(candidate)
 	if v.OK {
-		return Fail()
+		return FailWith(Negated{})
 	}
 	return Pass()
 }
@@ -96,5 +90,6 @@ func (n NotRule[T]) Evaluate(candidate T) Violations {
 	if !v.OK {
 		return Violations{}
 	}
-	return Violations{Items: []Violation{{Code: n.Code()}}}
+	neg := Negated{}
+	return Violations{Items: []Violation{{Code: codeName(neg), Context: neg}}}
 }

@@ -16,7 +16,7 @@ func TestViolations_IsValid_NoViolations(t *testing.T) {
 func TestViolations_IsValid_WithViolations(t *testing.T) {
 	v := rule.Violations{
 		Items: []rule.Violation{
-			{Code: "something-failed"},
+			{Code: "SomethingFailed"},
 		},
 	}
 	if v.IsValid() {
@@ -27,8 +27,8 @@ func TestViolations_IsValid_WithViolations(t *testing.T) {
 func TestViolations_Codes(t *testing.T) {
 	v := rule.Violations{
 		Items: []rule.Violation{
-			{Code: "first"},
-			{Code: "second"},
+			{Code: "First"},
+			{Code: "Second"},
 		},
 	}
 
@@ -36,8 +36,8 @@ func TestViolations_Codes(t *testing.T) {
 	if len(codes) != 2 {
 		t.Fatalf("got %d codes, want 2", len(codes))
 	}
-	if codes[0] != "first" || codes[1] != "second" {
-		t.Errorf("got codes %v, want [first second]", codes)
+	if codes[0] != "First" || codes[1] != "Second" {
+		t.Errorf("got codes %v, want [First Second]", codes)
 	}
 }
 
@@ -49,24 +49,21 @@ func TestViolations_Codes_Empty(t *testing.T) {
 	}
 }
 
-func TestViolationContext(t *testing.T) {
-	v := rule.Violation{
-		Code: "debits-must-equal-credits",
-		Context: map[string]any{
-			"total_debits":  int64(5000),
-			"total_credits": int64(3000),
-			"difference":    int64(2000),
-		},
+func TestViolation_CodeDerivedFromContextType(t *testing.T) {
+	type InsufficientFunds struct {
+		Available int64
+		Required  int64
 	}
 
-	if v.Code != "debits-must-equal-credits" {
-		t.Errorf("got code %q", v.Code)
+	v := rule.FailWith(InsufficientFunds{Available: 3000, Required: 5000})
+	if v.Context == nil {
+		t.Fatal("expected context")
 	}
-	ctx, ok := v.Context.(map[string]any)
+	ctx, ok := v.Context.(InsufficientFunds)
 	if !ok {
-		t.Fatalf("expected map[string]any context, got %T", v.Context)
+		t.Fatalf("expected InsufficientFunds, got %T", v.Context)
 	}
-	if ctx["difference"] != int64(2000) {
-		t.Errorf("got difference %v", ctx["difference"])
+	if ctx.Available != 3000 || ctx.Required != 5000 {
+		t.Errorf("got %+v", ctx)
 	}
 }

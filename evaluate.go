@@ -13,5 +13,5 @@ func collect[T any](candidate T, r Rule[T]) []Violation {
 	if v.OK {
 		return nil
 	}
-	return []Violation{{Code: r.Code(), Context: v.Context}}
+	return []Violation{{Code: codeName(v.Context), Context: v.Context}}
 }

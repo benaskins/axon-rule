@@ -12,43 +12,45 @@ type order struct {
 	Total      int64
 }
 
+// Violation context types
+type MissingCustomer struct{}
+type EmptyItems struct{}
+type NegativeTotal struct {
+	Total int64
+}
+
 func (o order) HasCustomer() rule.Verdict {
 	if o.CustomerID != "" {
 		return rule.Pass()
 	}
-	return rule.Fail()
+	return rule.FailWith(MissingCustomer{})
 }
 
 func (o order) HasItems() rule.Verdict {
 	if len(o.Items) > 0 {
 		return rule.Pass()
 	}
-	return rule.Fail()
+	return rule.FailWith(EmptyItems{})
 }
 
 func (o order) HasPositiveTotal() rule.Verdict {
 	if o.Total > 0 {
 		return rule.Pass()
 	}
-	return rule.FailWith(map[string]any{
-		"total": o.Total,
-	})
+	return rule.FailWith(NegativeTotal{Total: o.Total})
 }
 
 func TestNewRule_Satisfied(t *testing.T) {
-	r := rule.New("has-customer", order.HasCustomer)
+	r := rule.New(order.HasCustomer)
 
 	v := r.Check(order{CustomerID: "cust-1"})
 	if !v.OK {
 		t.Fatal("rule should be satisfied")
 	}
-	if v.Context != nil {
-		t.Errorf("expected nil context, got %v", v.Context)
-	}
 }
 
 func TestNewRule_NotSatisfied(t *testing.T) {
-	r := rule.New("has-customer", order.HasCustomer)
+	r := rule.New(order.HasCustomer)
 
 	v := r.Check(order{})
 	if v.OK {
@@ -56,16 +58,8 @@ func TestNewRule_NotSatisfied(t *testing.T) {
 	}
 }
 
-func TestNewRule_Code(t *testing.T) {
-	r := rule.New("has-customer", order.HasCustomer)
-
-	if r.Code() != "has-customer" {
-		t.Errorf("got code %q, want %q", r.Code(), "has-customer")
-	}
-}
-
-func TestNewRule_WithContext(t *testing.T) {
-	r := rule.New("has-positive-total", order.HasPositiveTotal)
+func TestNewRule_ContextType(t *testing.T) {
+	r := rule.New(order.HasPositiveTotal)
 
 	v := r.Check(order{Total: -100})
 	if v.OK {
@@ -74,18 +68,18 @@ func TestNewRule_WithContext(t *testing.T) {
 	if v.Context == nil {
 		t.Fatal("expected context, got nil")
 	}
-	ctx, ok := v.Context.(map[string]any)
+	ctx, ok := v.Context.(NegativeTotal)
 	if !ok {
-		t.Fatalf("expected map[string]any context, got %T", v.Context)
+		t.Fatalf("expected NegativeTotal context, got %T", v.Context)
 	}
-	if ctx["total"] != int64(-100) {
-		t.Errorf("got total %v, want -100", ctx["total"])
+	if ctx.Total != int64(-100) {
+		t.Errorf("got total %v, want -100", ctx.Total)
 	}
 }
 
 func TestNewRule_MethodExpression(t *testing.T) {
-	hasCustomer := rule.New(rule.MustBePresent, order.HasCustomer)
-	hasItems := rule.New(rule.MustNotBeEmpty, order.HasItems)
+	hasCustomer := rule.New(order.HasCustomer)
+	hasItems := rule.New(order.HasItems)
 
 	valid := order{CustomerID: "cust-1", Items: []string{"item-1"}}
 
