@@ -1,15 +1,15 @@
-package spec_test
+package rule_test
 
 import (
 	"testing"
 
-	spec "github.com/benaskins/axon-spec"
+	"github.com/benaskins/axon-rule"
 )
 
 func TestEvaluate_AllPass(t *testing.T) {
-	rules := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.New("has-items", order.HasItems),
+	rules := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.New("has-items", order.HasItems),
 	)
 
 	result := rules.Evaluate(order{CustomerID: "c1", Items: []string{"x"}, Total: 100})
@@ -19,10 +19,10 @@ func TestEvaluate_AllPass(t *testing.T) {
 }
 
 func TestEvaluate_CollectsAllViolations(t *testing.T) {
-	rules := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.New("has-items", order.HasItems),
-		spec.New("has-positive-total", order.HasPositiveTotal),
+	rules := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.New("has-items", order.HasItems),
+		rule.New("has-positive-total", order.HasPositiveTotal),
 	)
 
 	result := rules.Evaluate(order{})
@@ -34,7 +34,7 @@ func TestEvaluate_CollectsAllViolations(t *testing.T) {
 	}
 
 	codes := result.Codes()
-	want := []spec.Code{"has-customer", "has-items", "has-positive-total"}
+	want := []rule.Code{"has-customer", "has-items", "has-positive-total"}
 	for i, c := range codes {
 		if c != want[i] {
 			t.Errorf("violation %d: got %q, want %q", i, c, want[i])
@@ -43,8 +43,8 @@ func TestEvaluate_CollectsAllViolations(t *testing.T) {
 }
 
 func TestEvaluate_PreservesContext(t *testing.T) {
-	rules := spec.AllOf(
-		spec.New("has-positive-total", order.HasPositiveTotal),
+	rules := rule.AllOf(
+		rule.New("has-positive-total", order.HasPositiveTotal),
 	)
 
 	result := rules.Evaluate(order{Total: -50})
@@ -58,9 +58,9 @@ func TestEvaluate_PreservesContext(t *testing.T) {
 }
 
 func TestEvaluate_AllOf_CollectsChildViolations(t *testing.T) {
-	rules := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.New("has-items", order.HasItems),
+	rules := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.New("has-items", order.HasItems),
 	)
 
 	result := rules.Evaluate(order{})
@@ -74,10 +74,10 @@ func TestEvaluate_AllOf_CollectsChildViolations(t *testing.T) {
 }
 
 func TestEvaluate_AnyOf_NoViolationsOnPass(t *testing.T) {
-	rules := spec.AllOf(
-		spec.AnyOf(
-			spec.New("has-customer", order.HasCustomer),
-			spec.New("has-items", order.HasItems),
+	rules := rule.AllOf(
+		rule.AnyOf(
+			rule.New("has-customer", order.HasCustomer),
+			rule.New("has-items", order.HasItems),
 		),
 	)
 
@@ -88,10 +88,10 @@ func TestEvaluate_AnyOf_NoViolationsOnPass(t *testing.T) {
 }
 
 func TestEvaluate_AnyOf_CollectsAllOnFailure(t *testing.T) {
-	rules := spec.AllOf(
-		spec.AnyOf(
-			spec.New("has-customer", order.HasCustomer),
-			spec.New("has-items", order.HasItems),
+	rules := rule.AllOf(
+		rule.AnyOf(
+			rule.New("has-customer", order.HasCustomer),
+			rule.New("has-items", order.HasItems),
 		),
 	)
 
@@ -102,8 +102,8 @@ func TestEvaluate_AnyOf_CollectsAllOnFailure(t *testing.T) {
 }
 
 func TestEvaluate_Not_ViolationOnSatisfied(t *testing.T) {
-	rules := spec.AllOf(
-		spec.Not(spec.New("has-customer", order.HasCustomer)),
+	rules := rule.AllOf(
+		rule.Not(rule.New("has-customer", order.HasCustomer)),
 	)
 
 	result := rules.Evaluate(order{CustomerID: "c1"})
@@ -116,8 +116,8 @@ func TestEvaluate_Not_ViolationOnSatisfied(t *testing.T) {
 }
 
 func TestEvaluate_Not_NoViolationOnFailed(t *testing.T) {
-	rules := spec.AllOf(
-		spec.Not(spec.New("has-customer", order.HasCustomer)),
+	rules := rule.AllOf(
+		rule.Not(rule.New("has-customer", order.HasCustomer)),
 	)
 
 	result := rules.Evaluate(order{})
@@ -127,13 +127,13 @@ func TestEvaluate_Not_NoViolationOnFailed(t *testing.T) {
 }
 
 func TestEvaluate_NestedComposition(t *testing.T) {
-	rules := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.AnyOf(
-			spec.New("has-items", order.HasItems),
-			spec.New("has-positive-total", order.HasPositiveTotal),
+	rules := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.AnyOf(
+			rule.New("has-items", order.HasItems),
+			rule.New("has-positive-total", order.HasPositiveTotal),
 		),
-		spec.Not(spec.New("has-customer", order.HasCustomer)),
+		rule.Not(rule.New("has-customer", order.HasCustomer)),
 	)
 
 	// Customer present but no items/total, and Not(has-customer) fails
@@ -146,7 +146,7 @@ func TestEvaluate_NestedComposition(t *testing.T) {
 }
 
 func TestEvaluate_NoRules(t *testing.T) {
-	rules := spec.AllOf[order]()
+	rules := rule.AllOf[order]()
 	result := rules.Evaluate(order{})
 	if !result.IsValid() {
 		t.Fatal("no rules means no violations")

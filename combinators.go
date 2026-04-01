@@ -1,4 +1,4 @@
-package spec
+package rule
 
 // AllOf returns a Rule that is satisfied only when every inner rule passes.
 // All rules are evaluated regardless of failures; violations are collected

@@ -1,4 +1,4 @@
-package spec
+package rule
 
 // Code is a typed identifier for a violation. Domain packages define their
 // own codes as constants. axon-spec provides a small set of common codes.

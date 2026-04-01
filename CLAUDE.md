@@ -1,16 +1,16 @@
-# axon-spec
+# axon-rule
 
 Composable domain specifications for Go using the Specification pattern with generics.
 
 ## Architecture
 
-Single-package library (`spec`) with four files:
+Single-package library (`rule`) with four files:
 
 | File | Contents |
 |------|----------|
 | `code.go` | `Code` type (typed string), built-in codes (`MustBePresent`, `MustNotBeEmpty`, `MustBePositive`) |
-| `spec.go` | `Spec[T]` interface, `New` constructor |
-| `combinators.go` | `AllOf`, `AnyOf`, `Not` — all return `Spec[T]` |
+| `spec.go` | `Rule[T]` interface, `New` constructor |
+| `combinators.go` | `AllOf`, `AnyOf`, `Not` — all return `Rule[T]` |
 | `evaluate.go` | `Evaluate` function, internal `evaluator` interface for composite recursion |
 | `result.go` | `Violation` (Code + Context), `Result` ([]Violation + accessors) |
 
@@ -18,9 +18,9 @@ Single-package library (`spec`) with four files:
 
 - **One method signature**: all predicates are `func(T) (bool, map[string]any)`. Simple rules return nil context.
 - **No presentation in violations**: `Violation` has `Code` and `Context` only. Message lookup is a consumer concern.
-- **Violation codes are typed constants**: domain packages own their codes, axon-spec provides common ones.
-- **No `CompositeSpec`**: everything is `Spec[T]`. Composites implement an unexported `evaluator` interface for `Evaluate` to recurse into.
-- **Method expressions as primary pattern**: `spec.New(code, DomainType.Method)` — no closure wrappers needed.
+- **Violation codes are typed constants**: domain packages own their codes, axon-rule provides common ones.
+- **No `CompositeRule`**: everything is `Rule[T]`. Composites implement an unexported `evaluator` interface for `Evaluate` to recurse into.
+- **Method expressions as primary pattern**: `rule.New(code, DomainType.Method)` — no closure wrappers needed.
 
 ## Testing
 

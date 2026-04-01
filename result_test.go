@@ -1,21 +1,21 @@
-package spec_test
+package rule_test
 
 import (
 	"testing"
 
-	spec "github.com/benaskins/axon-spec"
+	"github.com/benaskins/axon-rule"
 )
 
 func TestViolations_IsValid_NoViolations(t *testing.T) {
-	v := spec.Violations{}
+	v := rule.Violations{}
 	if !v.IsValid() {
 		t.Fatal("empty violations should be valid")
 	}
 }
 
 func TestViolations_IsValid_WithViolations(t *testing.T) {
-	v := spec.Violations{
-		Items: []spec.Violation{
+	v := rule.Violations{
+		Items: []rule.Violation{
 			{Code: "something-failed"},
 		},
 	}
@@ -25,8 +25,8 @@ func TestViolations_IsValid_WithViolations(t *testing.T) {
 }
 
 func TestViolations_Codes(t *testing.T) {
-	v := spec.Violations{
-		Items: []spec.Violation{
+	v := rule.Violations{
+		Items: []rule.Violation{
 			{Code: "first"},
 			{Code: "second"},
 		},
@@ -42,7 +42,7 @@ func TestViolations_Codes(t *testing.T) {
 }
 
 func TestViolations_Codes_Empty(t *testing.T) {
-	v := spec.Violations{}
+	v := rule.Violations{}
 	codes := v.Codes()
 	if len(codes) != 0 {
 		t.Fatalf("got %d codes, want 0", len(codes))
@@ -50,7 +50,7 @@ func TestViolations_Codes_Empty(t *testing.T) {
 }
 
 func TestViolationContext(t *testing.T) {
-	v := spec.Violation{
+	v := rule.Violation{
 		Code: "debits-must-equal-credits",
 		Context: map[string]any{
 			"total_debits":  int64(5000),

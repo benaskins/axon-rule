@@ -1,9 +1,9 @@
-package spec_test
+package rule_test
 
 import (
 	"testing"
 
-	spec "github.com/benaskins/axon-spec"
+	"github.com/benaskins/axon-rule"
 )
 
 type order struct {
@@ -12,31 +12,31 @@ type order struct {
 	Total      int64
 }
 
-func (o order) HasCustomer() spec.Verdict {
+func (o order) HasCustomer() rule.Verdict {
 	if o.CustomerID != "" {
-		return spec.Pass()
+		return rule.Pass()
 	}
-	return spec.Fail()
+	return rule.Fail()
 }
 
-func (o order) HasItems() spec.Verdict {
+func (o order) HasItems() rule.Verdict {
 	if len(o.Items) > 0 {
-		return spec.Pass()
+		return rule.Pass()
 	}
-	return spec.Fail()
+	return rule.Fail()
 }
 
-func (o order) HasPositiveTotal() spec.Verdict {
+func (o order) HasPositiveTotal() rule.Verdict {
 	if o.Total > 0 {
-		return spec.Pass()
+		return rule.Pass()
 	}
-	return spec.FailWith(map[string]any{
+	return rule.FailWith(map[string]any{
 		"total": o.Total,
 	})
 }
 
 func TestNewRule_Satisfied(t *testing.T) {
-	r := spec.New("has-customer", order.HasCustomer)
+	r := rule.New("has-customer", order.HasCustomer)
 
 	v := r.Check(order{CustomerID: "cust-1"})
 	if !v.OK {
@@ -48,7 +48,7 @@ func TestNewRule_Satisfied(t *testing.T) {
 }
 
 func TestNewRule_NotSatisfied(t *testing.T) {
-	r := spec.New("has-customer", order.HasCustomer)
+	r := rule.New("has-customer", order.HasCustomer)
 
 	v := r.Check(order{})
 	if v.OK {
@@ -57,7 +57,7 @@ func TestNewRule_NotSatisfied(t *testing.T) {
 }
 
 func TestNewRule_Code(t *testing.T) {
-	r := spec.New("has-customer", order.HasCustomer)
+	r := rule.New("has-customer", order.HasCustomer)
 
 	if r.Code() != "has-customer" {
 		t.Errorf("got code %q, want %q", r.Code(), "has-customer")
@@ -65,7 +65,7 @@ func TestNewRule_Code(t *testing.T) {
 }
 
 func TestNewRule_WithContext(t *testing.T) {
-	r := spec.New("has-positive-total", order.HasPositiveTotal)
+	r := rule.New("has-positive-total", order.HasPositiveTotal)
 
 	v := r.Check(order{Total: -100})
 	if v.OK {
@@ -80,8 +80,8 @@ func TestNewRule_WithContext(t *testing.T) {
 }
 
 func TestNewRule_MethodExpression(t *testing.T) {
-	hasCustomer := spec.New(spec.MustBePresent, order.HasCustomer)
-	hasItems := spec.New(spec.MustNotBeEmpty, order.HasItems)
+	hasCustomer := rule.New(rule.MustBePresent, order.HasCustomer)
+	hasItems := rule.New(rule.MustNotBeEmpty, order.HasItems)
 
 	valid := order{CustomerID: "cust-1", Items: []string{"item-1"}}
 

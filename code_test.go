@@ -1,19 +1,19 @@
-package spec_test
+package rule_test
 
 import (
 	"testing"
 
-	spec "github.com/benaskins/axon-spec"
+	"github.com/benaskins/axon-rule"
 )
 
 func TestBuiltInCodes(t *testing.T) {
 	tests := []struct {
-		code spec.Code
+		code rule.Code
 		want string
 	}{
-		{spec.MustBePresent, "must-be-present"},
-		{spec.MustNotBeEmpty, "must-not-be-empty"},
-		{spec.MustBePositive, "must-be-positive"},
+		{rule.MustBePresent, "must-be-present"},
+		{rule.MustNotBeEmpty, "must-not-be-empty"},
+		{rule.MustBePositive, "must-be-positive"},
 	}
 
 	for _, tt := range tests {
@@ -24,7 +24,7 @@ func TestBuiltInCodes(t *testing.T) {
 }
 
 func TestCustomCode(t *testing.T) {
-	const DebitsMustEqualCredits spec.Code = "debits-must-equal-credits"
+	const DebitsMustEqualCredits rule.Code = "debits-must-equal-credits"
 
 	if DebitsMustEqualCredits != "debits-must-equal-credits" {
 		t.Fatal("custom code should hold its string value")

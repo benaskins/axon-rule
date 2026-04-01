@@ -1,4 +1,4 @@
-package spec
+package rule
 
 // Verdict is the return value of a predicate function.
 type Verdict struct {

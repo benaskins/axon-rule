@@ -1,4 +1,4 @@
-package spec
+package rule
 
 func collect[T any](candidate T, r Rule[T]) []Violation {
 	type evaluator[U any] interface {

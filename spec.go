@@ -1,4 +1,4 @@
-package spec
+package rule
 
 // Rule defines a single named business rule for a candidate of type T.
 type Rule[T any] interface {

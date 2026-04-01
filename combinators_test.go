@@ -1,15 +1,15 @@
-package spec_test
+package rule_test
 
 import (
 	"testing"
 
-	spec "github.com/benaskins/axon-spec"
+	"github.com/benaskins/axon-rule"
 )
 
 func TestAllOf_AllPass(t *testing.T) {
-	s := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.New("has-items", order.HasItems),
+	s := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.New("has-items", order.HasItems),
 	)
 
 	v := s.Check(order{CustomerID: "c1", Items: []string{"x"}})
@@ -19,9 +19,9 @@ func TestAllOf_AllPass(t *testing.T) {
 }
 
 func TestAllOf_OneFails(t *testing.T) {
-	s := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.New("has-items", order.HasItems),
+	s := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.New("has-items", order.HasItems),
 	)
 
 	v := s.Check(order{CustomerID: "c1"})
@@ -31,9 +31,9 @@ func TestAllOf_OneFails(t *testing.T) {
 }
 
 func TestAllOf_AllFail(t *testing.T) {
-	s := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.New("has-items", order.HasItems),
+	s := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.New("has-items", order.HasItems),
 	)
 
 	v := s.Check(order{})
@@ -43,8 +43,8 @@ func TestAllOf_AllFail(t *testing.T) {
 }
 
 func TestAllOf_Code(t *testing.T) {
-	s := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
+	s := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
 	)
 
 	if s.Code() != "all-of" {
@@ -53,9 +53,9 @@ func TestAllOf_Code(t *testing.T) {
 }
 
 func TestAnyOf_OnePass(t *testing.T) {
-	s := spec.AnyOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.New("has-items", order.HasItems),
+	s := rule.AnyOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.New("has-items", order.HasItems),
 	)
 
 	v := s.Check(order{CustomerID: "c1"})
@@ -65,9 +65,9 @@ func TestAnyOf_OnePass(t *testing.T) {
 }
 
 func TestAnyOf_NonePass(t *testing.T) {
-	s := spec.AnyOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.New("has-items", order.HasItems),
+	s := rule.AnyOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.New("has-items", order.HasItems),
 	)
 
 	v := s.Check(order{})
@@ -77,8 +77,8 @@ func TestAnyOf_NonePass(t *testing.T) {
 }
 
 func TestAnyOf_Code(t *testing.T) {
-	s := spec.AnyOf(
-		spec.New("has-customer", order.HasCustomer),
+	s := rule.AnyOf(
+		rule.New("has-customer", order.HasCustomer),
 	)
 
 	if s.Code() != "any-of" {
@@ -87,7 +87,7 @@ func TestAnyOf_Code(t *testing.T) {
 }
 
 func TestNot_Inverts_Failure(t *testing.T) {
-	s := spec.Not(spec.New("has-customer", order.HasCustomer))
+	s := rule.Not(rule.New("has-customer", order.HasCustomer))
 
 	v := s.Check(order{})
 	if !v.OK {
@@ -96,7 +96,7 @@ func TestNot_Inverts_Failure(t *testing.T) {
 }
 
 func TestNot_Inverts_Success(t *testing.T) {
-	s := spec.Not(spec.New("has-customer", order.HasCustomer))
+	s := rule.Not(rule.New("has-customer", order.HasCustomer))
 
 	v := s.Check(order{CustomerID: "c1"})
 	if v.OK {
@@ -105,7 +105,7 @@ func TestNot_Inverts_Success(t *testing.T) {
 }
 
 func TestNot_Code(t *testing.T) {
-	s := spec.Not(spec.New("suspended", order.HasCustomer))
+	s := rule.Not(rule.New("suspended", order.HasCustomer))
 
 	if s.Code() != "not:suspended" {
 		t.Errorf("got code %q, want %q", s.Code(), "not:suspended")
@@ -113,11 +113,11 @@ func TestNot_Code(t *testing.T) {
 }
 
 func TestComposition_Nested(t *testing.T) {
-	s := spec.AllOf(
-		spec.New("has-customer", order.HasCustomer),
-		spec.AnyOf(
-			spec.New("has-items", order.HasItems),
-			spec.New("has-positive-total", order.HasPositiveTotal),
+	s := rule.AllOf(
+		rule.New("has-customer", order.HasCustomer),
+		rule.AnyOf(
+			rule.New("has-items", order.HasItems),
+			rule.New("has-positive-total", order.HasPositiveTotal),
 		),
 	)
 
