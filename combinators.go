@@ -24,6 +24,14 @@ func (a allOf[T]) IsSatisfiedBy(candidate T) (bool, map[string]any) {
 	return satisfied, nil
 }
 
+func (a allOf[T]) evaluate(candidate T) Result {
+	var violations []Violation
+	for _, s := range a.specs {
+		violations = append(violations, collect(candidate, s)...)
+	}
+	return Result{Violations: violations}
+}
+
 // AnyOf returns a Spec that is satisfied when at least one inner spec passes.
 // Short-circuits on the first success.
 func AnyOf[T any](specs ...Spec[T]) Spec[T] {
@@ -46,6 +54,18 @@ func (a anyOf[T]) IsSatisfiedBy(candidate T) (bool, map[string]any) {
 	return false, nil
 }
 
+func (a anyOf[T]) evaluate(candidate T) Result {
+	var violations []Violation
+	for _, s := range a.specs {
+		vs := collect(candidate, s)
+		if len(vs) == 0 {
+			return Result{}
+		}
+		violations = append(violations, vs...)
+	}
+	return Result{Violations: violations}
+}
+
 // Not returns a Spec that inverts another spec. It is satisfied when the
 // inner spec fails. Produces a violation with "not:" prefixed to the inner
 // spec's code.
@@ -64,4 +84,12 @@ func (n notSpec[T]) Code() Code {
 func (n notSpec[T]) IsSatisfiedBy(candidate T) (bool, map[string]any) {
 	ok, _ := n.inner.IsSatisfiedBy(candidate)
 	return !ok, nil
+}
+
+func (n notSpec[T]) evaluate(candidate T) Result {
+	ok, _ := n.inner.IsSatisfiedBy(candidate)
+	if !ok {
+		return Result{}
+	}
+	return Result{Violations: []Violation{{Code: n.Code()}}}
 }
