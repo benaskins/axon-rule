@@ -1,0 +1,35 @@
+# axon-spec
+
+Composable domain specifications for Go using the Specification pattern with generics.
+
+## Architecture
+
+Single-package library (`spec`) with four files:
+
+| File | Contents |
+|------|----------|
+| `code.go` | `Code` type (typed string), built-in codes (`MustBePresent`, `MustNotBeEmpty`, `MustBePositive`) |
+| `spec.go` | `Spec[T]` interface, `New` constructor |
+| `combinators.go` | `AllOf`, `AnyOf`, `Not` — all return `Spec[T]` |
+| `evaluate.go` | `Evaluate` function, internal `evaluator` interface for composite recursion |
+| `result.go` | `Violation` (Code + Context), `Result` ([]Violation + accessors) |
+
+## Key design decisions
+
+- **One method signature**: all predicates are `func(T) (bool, map[string]any)`. Simple rules return nil context.
+- **No presentation in violations**: `Violation` has `Code` and `Context` only. Message lookup is a consumer concern.
+- **Violation codes are typed constants**: domain packages own their codes, axon-spec provides common ones.
+- **No `CompositeSpec`**: everything is `Spec[T]`. Composites implement an unexported `evaluator` interface for `Evaluate` to recurse into.
+- **Method expressions as primary pattern**: `spec.New(code, DomainType.Method)` — no closure wrappers needed.
+
+## Testing
+
+```bash
+go test ./...
+```
+
+All tests are table-driven or single-assertion. Domain test type is `order` defined in `spec_test.go`.
+
+## Dependencies
+
+None. Standard library only.
