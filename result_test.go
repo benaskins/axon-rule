@@ -6,33 +6,33 @@ import (
 	spec "github.com/benaskins/axon-spec"
 )
 
-func TestResultIsValid_NoViolations(t *testing.T) {
-	r := spec.Result{}
-	if !r.IsValid() {
-		t.Fatal("empty result should be valid")
+func TestViolations_IsValid_NoViolations(t *testing.T) {
+	v := spec.Violations{}
+	if !v.IsValid() {
+		t.Fatal("empty violations should be valid")
 	}
 }
 
-func TestResultIsValid_WithViolations(t *testing.T) {
-	r := spec.Result{
-		Violations: []spec.Violation{
+func TestViolations_IsValid_WithViolations(t *testing.T) {
+	v := spec.Violations{
+		Items: []spec.Violation{
 			{Code: "something-failed"},
 		},
 	}
-	if r.IsValid() {
-		t.Fatal("result with violations should not be valid")
+	if v.IsValid() {
+		t.Fatal("violations with items should not be valid")
 	}
 }
 
-func TestResultViolationCodes(t *testing.T) {
-	r := spec.Result{
-		Violations: []spec.Violation{
+func TestViolations_Codes(t *testing.T) {
+	v := spec.Violations{
+		Items: []spec.Violation{
 			{Code: "first"},
 			{Code: "second"},
 		},
 	}
 
-	codes := r.ViolationCodes()
+	codes := v.Codes()
 	if len(codes) != 2 {
 		t.Fatalf("got %d codes, want 2", len(codes))
 	}
@@ -41,9 +41,9 @@ func TestResultViolationCodes(t *testing.T) {
 	}
 }
 
-func TestResultViolationCodes_Empty(t *testing.T) {
-	r := spec.Result{}
-	codes := r.ViolationCodes()
+func TestViolations_Codes_Empty(t *testing.T) {
+	v := spec.Violations{}
+	codes := v.Codes()
 	if len(codes) != 0 {
 		t.Fatalf("got %d codes, want 0", len(codes))
 	}

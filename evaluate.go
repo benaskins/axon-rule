@@ -1,30 +1,17 @@
 package spec
 
-// evaluator is implemented by composite specs that can produce their own
-// Result by recursing into child specs.
-type evaluator[T any] interface {
-	evaluate(candidate T) Result
-}
-
-// Evaluate runs all specs against a candidate and returns a Result containing
-// violations from every failing spec. It never short-circuits.
-func Evaluate[T any](candidate T, specs ...Spec[T]) Result {
-	var violations []Violation
-	for _, s := range specs {
-		violations = append(violations, collect(candidate, s)...)
-	}
-	return Result{Violations: violations}
-}
-
-func collect[T any](candidate T, s Spec[T]) []Violation {
-	if e, ok := s.(evaluator[T]); ok {
-		r := e.evaluate(candidate)
-		return r.Violations
+func collect[T any](candidate T, r Rule[T]) []Violation {
+	type evaluator[U any] interface {
+		Evaluate(candidate U) Violations
 	}
 
-	pr := s.IsSatisfiedBy(candidate)
-	if pr.OK {
+	if e, ok := Rule[T](r).(evaluator[T]); ok {
+		return e.Evaluate(candidate).Items
+	}
+
+	v := r.Check(candidate)
+	if v.OK {
 		return nil
 	}
-	return []Violation{{Code: s.Code(), Context: pr.Context}}
+	return []Violation{{Code: r.Code(), Context: v.Context}}
 }

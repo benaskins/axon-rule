@@ -12,9 +12,9 @@ func TestAllOf_AllPass(t *testing.T) {
 		spec.New("has-items", order.HasItems),
 	)
 
-	r := s.IsSatisfiedBy(order{CustomerID: "c1", Items: []string{"x"}})
-	if !r.OK {
-		t.Fatal("AllOf should be satisfied when all specs pass")
+	v := s.Check(order{CustomerID: "c1", Items: []string{"x"}})
+	if !v.OK {
+		t.Fatal("AllOf should be satisfied when all rules pass")
 	}
 }
 
@@ -24,9 +24,9 @@ func TestAllOf_OneFails(t *testing.T) {
 		spec.New("has-items", order.HasItems),
 	)
 
-	r := s.IsSatisfiedBy(order{CustomerID: "c1"})
-	if r.OK {
-		t.Fatal("AllOf should not be satisfied when one spec fails")
+	v := s.Check(order{CustomerID: "c1"})
+	if v.OK {
+		t.Fatal("AllOf should not be satisfied when one rule fails")
 	}
 }
 
@@ -36,9 +36,9 @@ func TestAllOf_AllFail(t *testing.T) {
 		spec.New("has-items", order.HasItems),
 	)
 
-	r := s.IsSatisfiedBy(order{})
-	if r.OK {
-		t.Fatal("AllOf should not be satisfied when all specs fail")
+	v := s.Check(order{})
+	if v.OK {
+		t.Fatal("AllOf should not be satisfied when all rules fail")
 	}
 }
 
@@ -58,9 +58,9 @@ func TestAnyOf_OnePass(t *testing.T) {
 		spec.New("has-items", order.HasItems),
 	)
 
-	r := s.IsSatisfiedBy(order{CustomerID: "c1"})
-	if !r.OK {
-		t.Fatal("AnyOf should be satisfied when at least one spec passes")
+	v := s.Check(order{CustomerID: "c1"})
+	if !v.OK {
+		t.Fatal("AnyOf should be satisfied when at least one rule passes")
 	}
 }
 
@@ -70,9 +70,9 @@ func TestAnyOf_NonePass(t *testing.T) {
 		spec.New("has-items", order.HasItems),
 	)
 
-	r := s.IsSatisfiedBy(order{})
-	if r.OK {
-		t.Fatal("AnyOf should not be satisfied when no specs pass")
+	v := s.Check(order{})
+	if v.OK {
+		t.Fatal("AnyOf should not be satisfied when no rules pass")
 	}
 }
 
@@ -89,18 +89,18 @@ func TestAnyOf_Code(t *testing.T) {
 func TestNot_Inverts_Failure(t *testing.T) {
 	s := spec.Not(spec.New("has-customer", order.HasCustomer))
 
-	r := s.IsSatisfiedBy(order{})
-	if !r.OK {
-		t.Fatal("Not should be satisfied when inner spec fails")
+	v := s.Check(order{})
+	if !v.OK {
+		t.Fatal("Not should be satisfied when inner rule fails")
 	}
 }
 
 func TestNot_Inverts_Success(t *testing.T) {
 	s := spec.Not(spec.New("has-customer", order.HasCustomer))
 
-	r := s.IsSatisfiedBy(order{CustomerID: "c1"})
-	if r.OK {
-		t.Fatal("Not should not be satisfied when inner spec passes")
+	v := s.Check(order{CustomerID: "c1"})
+	if v.OK {
+		t.Fatal("Not should not be satisfied when inner rule passes")
 	}
 }
 
@@ -121,13 +121,13 @@ func TestComposition_Nested(t *testing.T) {
 		),
 	)
 
-	r := s.IsSatisfiedBy(order{CustomerID: "c1", Total: 100})
-	if !r.OK {
+	v := s.Check(order{CustomerID: "c1", Total: 100})
+	if !v.OK {
 		t.Fatal("nested composition should be satisfied")
 	}
 
-	r = s.IsSatisfiedBy(order{CustomerID: "c1"})
-	if r.OK {
+	v = s.Check(order{CustomerID: "c1"})
+	if v.OK {
 		t.Fatal("nested composition should fail when AnyOf has no match")
 	}
 }

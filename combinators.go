@@ -1,101 +1,100 @@
 package spec
 
-// AllOf returns a Spec that is satisfied only when every inner spec passes.
-// All specs are evaluated regardless of failures; violations are collected
-// from every failing spec.
-func AllOf[T any](specs ...Spec[T]) Spec[T] {
-	return allOf[T]{specs: specs}
+// AllOf returns a Rule that is satisfied only when every inner rule passes.
+// All rules are evaluated regardless of failures; violations are collected
+// from every failing rule.
+func AllOf[T any](rules ...Rule[T]) allOf[T] {
+	return allOf[T]{rules: rules}
 }
 
 type allOf[T any] struct {
-	specs []Spec[T]
+	rules []Rule[T]
 }
 
 func (a allOf[T]) Code() Code { return "all-of" }
 
-func (a allOf[T]) IsSatisfiedBy(candidate T) Verdict {
-	satisfied := true
-	for _, s := range a.specs {
-		r := s.IsSatisfiedBy(candidate)
-		if !r.OK {
-			satisfied = false
+func (a allOf[T]) Check(candidate T) Verdict {
+	for _, r := range a.rules {
+		v := r.Check(candidate)
+		if !v.OK {
+			return Fail()
 		}
 	}
-	if satisfied {
-		return Pass()
-	}
-	return Fail()
+	return Pass()
 }
 
-func (a allOf[T]) evaluate(candidate T) Result {
-	var violations []Violation
-	for _, s := range a.specs {
-		violations = append(violations, collect(candidate, s)...)
+// Evaluate runs all rules and collects violations from every failing rule.
+func (a allOf[T]) Evaluate(candidate T) Violations {
+	var items []Violation
+	for _, r := range a.rules {
+		items = append(items, collect(candidate, r)...)
 	}
-	return Result{Violations: violations}
+	return Violations{Items: items}
 }
 
-// AnyOf returns a Spec that is satisfied when at least one inner spec passes.
+// AnyOf returns a Rule that is satisfied when at least one inner rule passes.
 // Short-circuits on the first success.
-func AnyOf[T any](specs ...Spec[T]) Spec[T] {
-	return anyOf[T]{specs: specs}
+func AnyOf[T any](rules ...Rule[T]) anyOf[T] {
+	return anyOf[T]{rules: rules}
 }
 
 type anyOf[T any] struct {
-	specs []Spec[T]
+	rules []Rule[T]
 }
 
 func (a anyOf[T]) Code() Code { return "any-of" }
 
-func (a anyOf[T]) IsSatisfiedBy(candidate T) Verdict {
-	for _, s := range a.specs {
-		r := s.IsSatisfiedBy(candidate)
-		if r.OK {
+func (a anyOf[T]) Check(candidate T) Verdict {
+	for _, r := range a.rules {
+		v := r.Check(candidate)
+		if v.OK {
 			return Pass()
 		}
 	}
 	return Fail()
 }
 
-func (a anyOf[T]) evaluate(candidate T) Result {
-	var violations []Violation
-	for _, s := range a.specs {
-		vs := collect(candidate, s)
+// Evaluate returns no violations if any rule passes; otherwise collects all.
+func (a anyOf[T]) Evaluate(candidate T) Violations {
+	var items []Violation
+	for _, r := range a.rules {
+		vs := collect(candidate, r)
 		if len(vs) == 0 {
-			return Result{}
+			return Violations{}
 		}
-		violations = append(violations, vs...)
+		items = append(items, vs...)
 	}
-	return Result{Violations: violations}
+	return Violations{Items: items}
 }
 
-// Not returns a Spec that inverts another spec. It is satisfied when the
-// inner spec fails. Produces a violation with "not:" prefixed to the inner
-// spec's code.
-func Not[T any](s Spec[T]) Spec[T] {
-	return notSpec[T]{inner: s}
+// Not returns a Rule that inverts another rule. It is satisfied when the
+// inner rule fails. Produces a violation with "not:" prefixed to the inner
+// rule's code.
+func Not[T any](r Rule[T]) notRule[T] {
+	return notRule[T]{inner: r}
 }
 
-type notSpec[T any] struct {
-	inner Spec[T]
+type notRule[T any] struct {
+	inner Rule[T]
 }
 
-func (n notSpec[T]) Code() Code {
+func (n notRule[T]) Code() Code {
 	return "not:" + n.inner.Code()
 }
 
-func (n notSpec[T]) IsSatisfiedBy(candidate T) Verdict {
-	r := n.inner.IsSatisfiedBy(candidate)
-	if r.OK {
+func (n notRule[T]) Check(candidate T) Verdict {
+	v := n.inner.Check(candidate)
+	if v.OK {
 		return Fail()
 	}
 	return Pass()
 }
 
-func (n notSpec[T]) evaluate(candidate T) Result {
-	r := n.inner.IsSatisfiedBy(candidate)
-	if !r.OK {
-		return Result{}
+// Evaluate produces a violation when the inner rule passes (i.e. Not fails).
+func (n notRule[T]) Evaluate(candidate T) Violations {
+	v := n.inner.Check(candidate)
+	if !v.OK {
+		return Violations{}
 	}
-	return Result{Violations: []Violation{{Code: n.Code()}}}
+	return Violations{Items: []Violation{{Code: n.Code()}}}
 }

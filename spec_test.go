@@ -35,63 +35,63 @@ func (o order) HasPositiveTotal() spec.Verdict {
 	})
 }
 
-func TestNewSpec_Satisfied(t *testing.T) {
-	s := spec.New("has-customer", order.HasCustomer)
+func TestNewRule_Satisfied(t *testing.T) {
+	r := spec.New("has-customer", order.HasCustomer)
 
-	r := s.IsSatisfiedBy(order{CustomerID: "cust-1"})
-	if !r.OK {
-		t.Fatal("spec should be satisfied")
+	v := r.Check(order{CustomerID: "cust-1"})
+	if !v.OK {
+		t.Fatal("rule should be satisfied")
 	}
-	if r.Context != nil {
-		t.Errorf("expected nil context, got %v", r.Context)
-	}
-}
-
-func TestNewSpec_NotSatisfied(t *testing.T) {
-	s := spec.New("has-customer", order.HasCustomer)
-
-	r := s.IsSatisfiedBy(order{})
-	if r.OK {
-		t.Fatal("spec should not be satisfied for empty customer")
+	if v.Context != nil {
+		t.Errorf("expected nil context, got %v", v.Context)
 	}
 }
 
-func TestNewSpec_Code(t *testing.T) {
-	s := spec.New("has-customer", order.HasCustomer)
+func TestNewRule_NotSatisfied(t *testing.T) {
+	r := spec.New("has-customer", order.HasCustomer)
 
-	if s.Code() != "has-customer" {
-		t.Errorf("got code %q, want %q", s.Code(), "has-customer")
+	v := r.Check(order{})
+	if v.OK {
+		t.Fatal("rule should not be satisfied for empty customer")
 	}
 }
 
-func TestNewSpec_WithContext(t *testing.T) {
-	s := spec.New("has-positive-total", order.HasPositiveTotal)
+func TestNewRule_Code(t *testing.T) {
+	r := spec.New("has-customer", order.HasCustomer)
 
-	r := s.IsSatisfiedBy(order{Total: -100})
-	if r.OK {
-		t.Fatal("spec should not be satisfied for negative total")
+	if r.Code() != "has-customer" {
+		t.Errorf("got code %q, want %q", r.Code(), "has-customer")
 	}
-	if r.Context == nil {
+}
+
+func TestNewRule_WithContext(t *testing.T) {
+	r := spec.New("has-positive-total", order.HasPositiveTotal)
+
+	v := r.Check(order{Total: -100})
+	if v.OK {
+		t.Fatal("rule should not be satisfied for negative total")
+	}
+	if v.Context == nil {
 		t.Fatal("expected context, got nil")
 	}
-	if r.Context["total"] != int64(-100) {
-		t.Errorf("got total %v, want -100", r.Context["total"])
+	if v.Context["total"] != int64(-100) {
+		t.Errorf("got total %v, want -100", v.Context["total"])
 	}
 }
 
-func TestNewSpec_MethodExpression(t *testing.T) {
+func TestNewRule_MethodExpression(t *testing.T) {
 	hasCustomer := spec.New(spec.MustBePresent, order.HasCustomer)
 	hasItems := spec.New(spec.MustNotBeEmpty, order.HasItems)
 
 	valid := order{CustomerID: "cust-1", Items: []string{"item-1"}}
 
-	r := hasCustomer.IsSatisfiedBy(valid)
-	if !r.OK {
+	v := hasCustomer.Check(valid)
+	if !v.OK {
 		t.Fatal("hasCustomer should be satisfied")
 	}
 
-	r = hasItems.IsSatisfiedBy(valid)
-	if !r.OK {
+	v = hasItems.Check(valid)
+	if !v.OK {
 		t.Fatal("hasItems should be satisfied")
 	}
 }
