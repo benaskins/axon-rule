@@ -3,7 +3,7 @@ package rule
 // Verdict is the return value of a predicate function.
 type Verdict struct {
 	OK      bool
-	Context map[string]any
+	Context any
 }
 
 // Pass returns a successful verdict.
@@ -17,14 +17,14 @@ func Fail() Verdict {
 }
 
 // FailWith returns a failed verdict with context.
-func FailWith(context map[string]any) Verdict {
+func FailWith(context any) Verdict {
 	return Verdict{OK: false, Context: context}
 }
 
 // Violation records a rule that was not satisfied.
 type Violation struct {
 	Code    Code
-	Context map[string]any
+	Context any
 }
 
 // Violations holds the outcome of evaluating rules against a candidate.

@@ -62,7 +62,11 @@ func TestViolationContext(t *testing.T) {
 	if v.Code != "debits-must-equal-credits" {
 		t.Errorf("got code %q", v.Code)
 	}
-	if v.Context["difference"] != int64(2000) {
-		t.Errorf("got difference %v", v.Context["difference"])
+	ctx, ok := v.Context.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any context, got %T", v.Context)
+	}
+	if ctx["difference"] != int64(2000) {
+		t.Errorf("got difference %v", ctx["difference"])
 	}
 }

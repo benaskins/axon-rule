@@ -16,7 +16,7 @@ Single-package library (`rule`) with four files:
 
 ## Key design decisions
 
-- **One method signature**: all predicates are `func(T) (bool, map[string]any)`. Simple rules return nil context.
+- **One method signature**: all predicates return `Verdict`. Simple rules return `Pass()` or `Fail()`, rich rules use `FailWith(typedContext)`.
 - **No presentation in violations**: `Violation` has `Code` and `Context` only. Message lookup is a consumer concern.
 - **Violation codes are typed constants**: domain packages own their codes, axon-rule provides common ones.
 - **No `CompositeRule`**: everything is `Rule[T]`. Composites implement an unexported `evaluator` interface for `Evaluate` to recurse into.

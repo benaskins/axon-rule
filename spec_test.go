@@ -74,8 +74,12 @@ func TestNewRule_WithContext(t *testing.T) {
 	if v.Context == nil {
 		t.Fatal("expected context, got nil")
 	}
-	if v.Context["total"] != int64(-100) {
-		t.Errorf("got total %v, want -100", v.Context["total"])
+	ctx, ok := v.Context.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any context, got %T", v.Context)
+	}
+	if ctx["total"] != int64(-100) {
+		t.Errorf("got total %v, want -100", ctx["total"])
 	}
 }
 

@@ -59,10 +59,10 @@ func (e JournalEntry) DebitsEqualCredits() rule.PredicateResult {
     if d == c {
         return rule.Pass()
     }
-    return rule.FailWith(map[string]any{
-        "total_debits":  d,
-        "total_credits": c,
-        "difference":    d - c,
+    return rule.FailWith(BalanceMismatch{
+        TotalDebits:  d,
+        TotalCredits: c,
+        Difference:   d - c,
     })
 }
 ```

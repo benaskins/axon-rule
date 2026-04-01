@@ -52,8 +52,12 @@ func TestEvaluate_PreservesContext(t *testing.T) {
 		t.Fatalf("got %d violations, want 1", len(result.Items))
 	}
 	v := result.Items[0]
-	if v.Context["total"] != int64(-50) {
-		t.Errorf("got total %v, want -50", v.Context["total"])
+	ctx, ok := v.Context.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any context, got %T", v.Context)
+	}
+	if ctx["total"] != int64(-50) {
+		t.Errorf("got total %v, want -50", ctx["total"])
 	}
 }
 
