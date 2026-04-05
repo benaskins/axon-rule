@@ -1,133 +1,206 @@
 # axon-rule
 
-Composable business rules for Go.
+Composable business-rule predicates and a typed state machine for Go.
 
-axon-rule implements the Specification pattern using Go generics. Rules produce typed violations — the type name becomes the violation code, giving you compile-time safety and stable keys for localisation.
+`axon-rule` provides two complementary systems:
 
-## Install
+1. **Rule predicates** — typed, composable checks (`Rule[T]`, `AllOf`, `AnyOf`, `Not`)
+2. **State machine** — guard-driven transitions built on top of those predicates (`Machine[T]`, `Instance[T]`)
+
+## Prerequisites
+
+- Go 1.24+
+- [just](https://github.com/casey/just)
+
+## Build & Test
 
 ```bash
-go get github.com/benaskins/axon-rule
+just test
+just vet
 ```
 
-## Quick start
+---
 
-Define violation types and predicates on your domain type:
+## Rule Predicates
+
+### Core types
+
+| Type | Description |
+|------|-------------|
+| `Rule[T]` | Interface: `Check(T) Verdict` |
+| `Verdict` | Result of a rule check: `OK bool`, `Context any` |
+| `New[T](fn)` | Create a Rule from a predicate function |
+| `Pass()` | Return a passing Verdict |
+| `FailWith(context)` | Return a failing Verdict with typed context |
+
+### Combinators
 
 ```go
-package ledger
+AllOf[T](rules ...Rule[T]) Rule[T]   // passes when all rules pass
+AnyOf[T](rules ...Rule[T]) Rule[T]   // passes when at least one rule passes
+Not[T](rule Rule[T]) Rule[T]         // inverts a rule
+AlwaysAllow[T]() Rule[T]             // always passes (useful as a default guard)
+```
+
+### Quick example
+
+```go
+type Order struct { Total float64; Approved bool }
+
+type NoValue struct{}
+type NotApproved struct{}
+
+var (
+    hasValue  = rule.New(func(o Order) rule.Verdict {
+        if o.Total > 0 { return rule.Pass() }
+        return rule.FailWith(NoValue{})
+    })
+    isApproved = rule.New(func(o Order) rule.Verdict {
+        if o.Approved { return rule.Pass() }
+        return rule.FailWith(NotApproved{})
+    })
+    canFulfil = rule.AllOf(hasValue, isApproved)
+)
+
+v := canFulfil.Check(Order{Total: 42.0, Approved: true})
+// v.OK == true
+```
+
+---
+
+## State Machine
+
+### Types
+
+| Type | Description |
+|------|-------------|
+| `State` | Named state with optional `Metadata map[string]any`. Equality is name-based. |
+| `Transition[T]` | Edge from `From State` to `To State`, guarded by a `Rule[T]`. |
+| `HistoryEntry` | Records a `From`, `To`, and `Timestamp` for each applied transition. |
+| `Machine[T]` | Immutable definition: initial state + transitions. |
+| `Instance[T]` | Mutable running instance of a `Machine[T]`. Single-owner (not goroutine-safe). |
+
+### Machine API
+
+```go
+// Construct
+m := rule.NewMachine(initial, []rule.Transition[T]{...})
+
+// Inspect
+m.AvailableTransitions(current State, candidate T) []Transition[T]
+m.TerminalStates() []State
+m.Validate() error   // returns error if any state is unreachable from initial
+```
+
+### Instance API
+
+```go
+inst := rule.NewInstance(m)
+
+inst.Current() State
+inst.History() []HistoryEntry
+inst.IsTerminal() bool
+
+// Advance: apply first passing transition from current state
+inst.Advance(candidate T) error
+
+// AdvanceTo: move to a specific target state (guard must pass)
+inst.AdvanceTo(target State, candidate T) error
+```
+
+---
+
+## Worked example: factory pipeline
+
+The factory-floor build pipeline moves a build through five stages:
+`backlog → scaffolding → building → qc → lamina`
+
+Each transition can be guarded by composed predicates.
+
+```go
+package main
 
 import (
+    "fmt"
     "github.com/benaskins/axon-rule"
 )
 
-type TooFewLines struct{}
-type MissingDescription struct{}
-
-type BalanceMismatch struct {
-    TotalDebits  string
-    TotalCredits string
+type Build struct {
+    HasSpec     bool
+    TestsPassed bool
+    QCPassed    bool
 }
 
-func (e JournalEntry) HasDescription() rule.Verdict {
-    if e.Description != "" {
-        return rule.Pass()
-    }
-    return rule.FailWith(MissingDescription{})
-}
+type MissingSpec struct{}
+type TestsNotPassed struct{}
+type QCNotPassed struct{}
 
-func (e JournalEntry) HasAtLeastTwoLines() rule.Verdict {
-    if len(e.Lines) >= 2 {
-        return rule.Pass()
-    }
-    return rule.FailWith(TooFewLines{})
-}
+func main() {
+    // States
+    backlog     := rule.State{Name: "backlog"}
+    scaffolding := rule.State{Name: "scaffolding"}
+    building    := rule.State{Name: "building"}
+    qc          := rule.State{Name: "qc"}
+    lamina      := rule.State{Name: "lamina"}
 
-func (e JournalEntry) DebitsEqualCredits() rule.Verdict {
-    var d, c int64
-    for _, l := range e.Lines {
-        d += l.Debit
-        c += l.Credit
-    }
-    if d == c {
-        return rule.Pass()
-    }
-    return rule.FailWith(BalanceMismatch{
-        TotalDebits:  fmt.Sprint(d),
-        TotalCredits: fmt.Sprint(c),
+    // Guards
+    hasSpec := rule.New(func(b Build) rule.Verdict {
+        if b.HasSpec {
+            return rule.Pass()
+        }
+        return rule.FailWith(MissingSpec{})
     })
-}
-```
+    testsPassed := rule.New(func(b Build) rule.Verdict {
+        if b.TestsPassed {
+            return rule.Pass()
+        }
+        return rule.FailWith(TestsNotPassed{})
+    })
+    qcPassed := rule.New(func(b Build) rule.Verdict {
+        if b.QCPassed {
+            return rule.Pass()
+        }
+        return rule.FailWith(QCNotPassed{})
+    })
 
-Compose rules using method expressions:
+    m := rule.NewMachine(backlog, []rule.Transition[Build]{
+        {From: backlog,     To: scaffolding, Guard: hasSpec},
+        {From: scaffolding, To: building,    Guard: rule.AlwaysAllow[Build]()},
+        {From: building,    To: qc,          Guard: testsPassed},
+        {From: qc,          To: lamina,      Guard: rule.AllOf(testsPassed, qcPassed)},
+    })
 
-```go
-var IsValid = rule.AllOf(
-    rule.New(JournalEntry.HasDescription),
-    rule.New(JournalEntry.HasAtLeastTwoLines),
-    rule.New(JournalEntry.DebitsEqualCredits),
-)
-```
-
-Evaluate and consume:
-
-```go
-violations := ledger.IsValid.Evaluate(entry)
-
-if !violations.IsValid() {
-    for _, v := range violations.Items {
-        fmt.Println(v.Code) // "BalanceMismatch" — derived from type name
+    if err := m.Validate(); err != nil {
+        panic(err)
     }
-}
-```
 
-Match on types for compile-time safety:
+    inst := rule.NewInstance(m)
+    b := Build{HasSpec: true, TestsPassed: true, QCPassed: true}
 
-```go
-for _, v := range violations.Items {
-    switch ctx := v.Context.(type) {
-    case ledger.BalanceMismatch:
-        fmt.Printf("debits=%s credits=%s\n", ctx.TotalDebits, ctx.TotalCredits)
-    case ledger.TooFewLines:
-        fmt.Println("need at least two lines")
+    for !inst.IsTerminal() {
+        if err := inst.Advance(b); err != nil {
+            fmt.Println("blocked:", err)
+            break
+        }
+        fmt.Println("→", inst.Current().Name)
     }
+    // Output:
+    // → scaffolding
+    // → building
+    // → qc
+    // → lamina
 }
 ```
 
-Use the code string for i18n lookups:
+### Guard composition with combinators
 
 ```go
-for _, v := range violations.Items {
-    msg := localiser.Lookup(v.Code) // "BalanceMismatch" → localised string
-    fmt.Println(msg)
-}
+// Require both tests and QC before entering lamina
+readyForLamina := rule.AllOf(testsPassed, qcPassed)
+
+// Accept a build if it has a spec OR was manually approved
+canScaffold := rule.AnyOf(hasSpec, manuallyApproved)
+
+// Block a build if it is flagged
+notFlagged := rule.Not(isFlagged)
 ```
-
-## Combinators
-
-Combine rules to express complex eligibility:
-
-```go
-var CanPlaceOrder = rule.AllOf(
-    rule.New(Customer.IsActive),
-    rule.AnyOf(
-        rule.New(Customer.HasVerifiedEmail),
-        rule.New(Customer.HasVerifiedPhone),
-    ),
-    rule.Not(rule.New(Customer.IsSuspended)),
-)
-```
-
-| Combinator | Behaviour |
-|------------|-----------|
-| `AllOf` | All rules must pass. Evaluates every rule, collects all violations. |
-| `AnyOf` | At least one rule must pass. If none pass, collects all violations. |
-| `Not` | Inverts a rule. Produces a `Negated` violation when the inner rule passes. |
-
-## Design principles
-
-- **Type is identity** — violation codes are derived from `reflect.TypeOf(context).Name()`. No manual string constants.
-- **One interface** — `Rule[T]` has a single method: `Check(T) Verdict`.
-- **No presentation** — `Violation` carries a code and context. Messages and translations live elsewhere.
-- **Typed context** — consumers use type switches for compile-time safety. Marker types (`struct{}`) for context-free violations.
-- **Zero dependencies** — standard library only.

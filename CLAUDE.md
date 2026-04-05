@@ -1,35 +1,32 @@
 # axon-rule
 
-Composable business rules for Go using the Specification pattern with generics.
+Composable business rules using the Specification pattern with generics, plus a guard-driven state machine.
+
+## Module
+
+- Module path: `github.com/benaskins/axon-rule`
+- Project type: library (no main package)
+
+## Build & Test
+
+```bash
+just test    # go test -race ./...
+just vet     # go vet ./...
+```
 
 ## Architecture
 
-Single-package library (`rule`) with four files:
+Single-package library (`rule`) with two systems:
 
-| File | Contents |
-|------|----------|
-| `spec.go` | `Rule[T]` interface (single method: `Check`), `New` constructor |
-| `combinators.go` | `AllOf`, `AnyOf`, `Not` — all return exported combinator types with `Evaluate` |
-| `evaluate.go` | Internal `collect` function, `evaluator` interface for composite recursion |
-| `result.go` | `Verdict`, `Violation`, `Violations`, `codeName` (reflect-based code derivation) |
+**Rule predicates:** `Rule[T]` interface (single method: `Check`), `New` constructor, `AllOf`/`AnyOf`/`Not` combinators, `Verdict`/`Violation`/`Violations` results. Type-driven violation codes via `reflect.TypeOf(context).Name()`.
 
-## Key design decisions
+**State machine:** `State` (name-based equality), `Transition[T]` (guarded edges), `Machine[T]` (immutable definition with validation), `Instance[T]` (mutable runtime, single-owner). Guards are `Rule[T]` — full combinator composition.
 
-- **Type-driven violation codes**: `Violation.Code` is derived from `reflect.TypeOf(context).Name()`. No manual string codes — the type is the identity.
-- **Single-method interface**: `Rule[T]` has only `Check(T) Verdict`. No `Code()` method.
-- **All failures are typed**: predicates return `FailWith(TypedContext{})`. No bare `Fail()`. Marker types (e.g. `TooFewLines struct{}`) for context-free violations.
-- **No presentation in violations**: `Violation` has `Code` (derived) and `Context` (typed). Messages and translations are a consumer concern.
-- **Method expressions as primary pattern**: `rule.New(DomainType.Method)` — no closure wrappers needed.
-- **Exported combinator types**: `AllOfRule[T]`, `AnyOfRule[T]`, `NotRule[T]` expose `Evaluate` for violation collection.
+Read [AGENTS.md](./AGENTS.md) for architecture details.
 
-## Testing
+## Constraints
 
-```bash
-go test ./...
-```
-
-All tests are table-driven or single-assertion. Domain test type is `order` defined in `spec_test.go`.
-
-## Dependencies
-
-Standard library only (`reflect`).
+- Standard library only — zero external dependencies
+- All existing types must be preserved — state machine additions are strictly additive
+- `Instance[T]` is single-owner — no mutexes or sync primitives
+- No third-party assertion libraries — standard `testing` package only
